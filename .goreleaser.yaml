@@ -1,0 +1,48 @@
+---
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+version: 2
+project_name: talos-mcp
+gitea_urls:
+  api: https://git.erwanleboucher.dev/api/v1
+  download: https://git.erwanleboucher.dev
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: talos-mcp
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X main.version={{.Version}} -X main.commit={{.ShortCommit}}
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    main: ./cmd/talos-mcp
+    binary: talos-mcp
+
+archives:
+  - id: talos-mcp
+    ids:
+      - talos-mcp
+
+checksum:
+  name_template: "checksums.txt"
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  use: gitea
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+      - "Merge pull request"
