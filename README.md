@@ -43,6 +43,15 @@ All accept optional `nodes`, `context`, and `endpoints` per call.
 | stdio (default) | `TALOS_MCP_TRANSPORT=stdio` |
 | Streamable HTTP at `/mcp` | `TALOS_MCP_TRANSPORT=http`, `TALOS_MCP_HTTP_ADDR=:8080` |
 
+## Configuration
+
+| Env | Default |
+| --- | --- |
+| `TALOS_MCP_LOG_LEVEL` | `info` (`debug` also logs each call's arguments) |
+| `TALOS_MCP_TOOL_TIMEOUT` | `20s` — `time.ParseDuration` format; clamps `talos_health.wait_timeout_seconds` |
+
+`talos_disk_usage` caps results at 20000 entries.
+
 ## Auth
 
 `client.WithDefaultConfig()` discovers talosconfig in order:

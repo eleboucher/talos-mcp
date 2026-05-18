@@ -97,19 +97,23 @@ func (c *Client) Close() error {
 }
 
 func (c *Client) Run(ctx context.Context, op func(tc *client.Client) error) error {
-	return retry.Constant(10*time.Second, retry.WithUnits(100*time.Millisecond)).Retry(func() error {
-		err := op(c.Talos())
-		if err == nil {
-			return nil
-		}
-		if !IsTransientError(err) {
-			return err
-		}
-		if rerr := c.refresh(ctx); rerr != nil {
-			return retry.ExpectedError(fmt.Errorf("refresh client: %w (original: %v)", rerr, err))
-		}
-		return retry.ExpectedError(err)
-	})
+	return retry.Constant(10*time.Second, retry.WithUnits(100*time.Millisecond)).
+		RetryWithContext(ctx, func(ctx context.Context) error {
+			if err := ctx.Err(); err != nil {
+				return err
+			}
+			err := op(c.Talos())
+			if err == nil {
+				return nil
+			}
+			if !IsTransientError(err) {
+				return err
+			}
+			if rerr := c.refresh(ctx); rerr != nil {
+				return retry.ExpectedError(fmt.Errorf("refresh client: %w (original: %v)", rerr, err))
+			}
+			return retry.ExpectedError(err)
+		})
 }
 
 func (c *Client) refresh(ctx context.Context) error {

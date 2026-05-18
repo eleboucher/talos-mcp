@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"math"
 
 	"github.com/mark3labs/mcp-go/mcp"
@@ -65,10 +66,12 @@ func errResult(err error) *mcp.CallToolResult {
 	return mcp.NewToolResultError(err.Error())
 }
 
+//nolint:unparam // error slot kept so handlers can `return jsonResult(resp)`
 func jsonResult(m protoreflect.ProtoMessage) (*mcp.CallToolResult, error) {
 	b, err := protojson.MarshalOptions{Multiline: true, Indent: "  "}.Marshal(m)
 	if err != nil {
-		return nil, fmt.Errorf("marshal response: %w", err)
+		slog.Error("marshal response", "type", fmt.Sprintf("%T", m), "err", err)
+		return errResult(fmt.Errorf("marshal response: %w", err)), nil
 	}
 	return mcp.NewToolResultText(string(b)), nil
 }
@@ -85,7 +88,8 @@ func jsonArrayResult[T protoreflect.ProtoMessage](items []T) (*mcp.CallToolResul
 		}
 		chunk, err := opts.Marshal(it)
 		if err != nil {
-			return nil, fmt.Errorf("marshal item %d: %w", i, err)
+			slog.Error("marshal item", "index", i, "type", fmt.Sprintf("%T", it), "err", err)
+			return errResult(fmt.Errorf("marshal item %d: %w", i, err)), nil
 		}
 		b = append(b, ' ', ' ')
 		b = append(b, chunk...)

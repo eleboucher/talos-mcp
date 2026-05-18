@@ -3,7 +3,9 @@ package tools
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -39,6 +41,13 @@ func registerHealth(s *server.MCPServer, f *talosclient.Factory) {
 		defer func() { _ = c.Close() }()
 
 		timeout := time.Duration(req.GetInt("wait_timeout_seconds", 60)) * time.Second
+		if deadline, ok := callCtx.Deadline(); ok {
+			if budget := time.Until(deadline); budget > 0 && timeout > budget {
+				slog.Warn("health wait_timeout_seconds exceeds tool budget; clamping",
+					"requested", timeout, "budget", budget)
+				timeout = budget
+			}
+		}
 		info := &clusterapi.ClusterInfo{
 			ControlPlaneNodes: req.GetStringSlice("control_plane_nodes", nil),
 			WorkerNodes:       req.GetStringSlice("worker_nodes", nil),
@@ -48,13 +57,14 @@ func registerHealth(s *server.MCPServer, f *talosclient.Factory) {
 			return errResult(err), nil
 		}
 		var sb strings.Builder
+		var streamErr error
 		for {
 			msg, recvErr := stream.Recv()
 			if errors.Is(recvErr, io.EOF) {
 				break
 			}
 			if recvErr != nil {
-				sb.WriteString("ERROR: " + recvErr.Error() + "\n")
+				streamErr = recvErr
 				break
 			}
 			if errStr := msg.GetMetadata().GetError(); errStr != "" {
@@ -64,6 +74,10 @@ func registerHealth(s *server.MCPServer, f *talosclient.Factory) {
 				sb.WriteString(msg.GetMessage())
 				sb.WriteByte('\n')
 			}
+		}
+		if streamErr != nil {
+			return errResult(fmt.Errorf("health stream aborted: %w\npartial output:\n%s",
+				streamErr, sb.String())), nil
 		}
 		return mcp.NewToolResultText(sb.String()), nil
 	})
