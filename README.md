@@ -77,5 +77,35 @@ docker run --rm -p 8080:8080 \
 ## Kubernetes
 
 `deploy/talos-mcp.yaml` declares a `talos.dev/v1alpha1 ServiceAccount` and a
-`toolhive.stacklok.dev/v1alpha1 MCPServer`. The cluster must enable
-`kubernetesTalosAPIAccess` for the target namespace and `os:reader`.
+`toolhive.stacklok.dev/v1alpha1 MCPServer`. Talos mints a Secret named
+**exactly the same as the SA** (no `-talosconfig` suffix added), so the SA is
+named `talos-mcp-talosconfig` and the pod mounts a Secret of the same name.
+
+### Required Talos machineconfig
+
+Every control-plane node must allow the pod's namespace + role. Add to your
+machineconfig and `talosctl apply-config` to each control-plane node:
+
+```yaml
+machine:
+  features:
+    kubernetesTalosAPIAccess:
+      enabled: true
+      allowedKubernetesNamespaces:
+        - <namespace-talos-mcp-runs-in>
+      allowedRoles:
+        - os:reader
+```
+
+No reboot needed — the change is runtime.
+
+### Verify
+
+```
+kubectl -n <ns> get serviceaccount.talos.dev/talos-mcp-talosconfig -o jsonpath='{.status}'
+kubectl -n <ns> get secret talos-mcp-talosconfig
+```
+
+`status` should be `{}` (no `failureReason`); the Secret should appear within
+seconds. If `failureReason: 'Namespace is not allowed: …'`, the live
+machineconfig hasn't been updated on at least one node.
