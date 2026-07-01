@@ -3,7 +3,7 @@ module git.erwanleboucher.dev/eleboucher/talos-mcp
 go 1.26.3
 
 require (
-	github.com/cosi-project/runtime v1.16.1
+	github.com/cosi-project/runtime v1.16.2
 	github.com/mark3labs/mcp-go v0.55.1
 	github.com/siderolabs/go-retry v0.3.3
 	github.com/siderolabs/talos/pkg/machinery v1.13.5
