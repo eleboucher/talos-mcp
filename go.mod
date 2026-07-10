@@ -4,7 +4,7 @@ go 1.26.3
 
 require (
 	github.com/cosi-project/runtime v1.16.2
-	github.com/mark3labs/mcp-go v0.55.1
+	github.com/mark3labs/mcp-go v0.56.0
 	github.com/siderolabs/go-retry v0.3.3
 	github.com/siderolabs/talos/pkg/machinery v1.13.5
 	google.golang.org/grpc v1.82.0
